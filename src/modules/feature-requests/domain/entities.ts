@@ -6,13 +6,13 @@ export interface FeatureRequest {
   description: string;
   status: Status;
   priority: Priority;
-  createdAt: string; // ISO 8601
-  updatedAt: string; // ISO 8601
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Comment {
   id: string;
   featureRequestId: string;
   body: string;
-  createdAt: string; // ISO 8601
+  createdAt: string; 
 }
