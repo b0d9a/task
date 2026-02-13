@@ -1,6 +1,21 @@
 # Internal Feature Request Board
 
-A minimal internal tool for creating, tracking, and commenting on feature requests. Built as a take-home project with a focus on clean architecture, correctness, and documentation.
+A minimal internal tool for creating, tracking, and commenting on feature requests.
+
+---
+
+## Table of Contents
+
+1. [Tech Stack](#tech-stack)
+2. [Getting Started](#getting-started)
+3. [Architecture](#architecture)
+4. [API Reference](#api-reference)
+5. [Testing](#testing)
+6. [Assumptions](#assumptions)
+7. [Intentional Decisions](#intentional-decisions)
+8. [Items Not Implemented](#items-not-implemented)
+9. [Swapping to Prisma](#swapping-to-prisma)
+10. [Project Structure](#project-structure)
 
 ---
 
@@ -13,7 +28,7 @@ A minimal internal tool for creating, tracking, and commenting on feature reques
 | Styling | Tailwind CSS 3 |
 | Validation | Zod 3 |
 | Testing | Vitest |
-| Persistence | In-memory (repository pattern, swappable) |
+| Persistence | In-memory (repository pattern, swappable to Prisma) |
 
 ---
 
@@ -32,15 +47,13 @@ npm install
 
 ### Environment
 
-Copy the example env file (already provided):
+`.env.local` is included in the repository (no secrets — only a base URL):
 
 ```bash
-# .env.local is included in the repo for convenience (no secrets).
-# The only variable is:
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
 
-> For production, set `NEXT_PUBLIC_BASE_URL` to your deployed origin.
+For production (e.g. Vercel), set `NEXT_PUBLIC_BASE_URL` to your deployed origin.
 
 ### Development
 
@@ -48,7 +61,7 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you will be redirected to `/feature-requests`.
+Open [http://localhost:3000](http://localhost:3000) — redirects to `/feature-requests`.
 
 ### Build
 
@@ -60,8 +73,9 @@ npm run start
 ### Lint & Type-check
 
 ```bash
-npm run lint
-npm run type-check
+npm run lint        # ESLint
+npm run type-check  # tsc --noEmit
+npm run test        # Vitest unit tests
 ```
 
 ---
@@ -91,26 +105,26 @@ src/
 
 Pure TypeScript — no framework dependencies.
 
-- `enums.ts` — `Status` and `Priority` defined as `as const` objects so Zod can consume them directly.
-- `entities.ts` — `FeatureRequest` and `Comment` interfaces. Dates are ISO 8601 strings for zero-friction JSON serialisation.
+- `enums.ts` — `Status` and `Priority` as `as const` objects; union types derived from them.
+- `entities.ts` — `FeatureRequest` and `Comment` interfaces. Dates stored as ISO 8601 strings.
 - `repository.ts` — `FeatureRequestRepository` interface (the **port**). Use-cases depend only on this interface, never on a concrete implementation.
 
 #### Application (`application/`)
 
 Contains all business rules.
 
-- `schemas.ts` — Zod schemas. **Single source of truth** for validation. All DTOs are derived via `z.infer<>`.
+- `schemas.ts` — Zod schemas. **Single source of truth** for all validation. DTOs are `z.infer<>` derivations — no duplication.
 - `errors.ts` — Typed error classes (`NotFoundError`, `ValidationError`) with machine-readable `code` strings.
-- `use-cases/` — One class per use-case, injected with the repository via constructor.
+- `use-cases/` — One class per use-case, injected with the repository via constructor (no DI container).
 
 #### Infrastructure (`infrastructure/`)
 
-- `in-memory-repository.ts` — Implements `FeatureRequestRepository` using two `Map` fields. Exported as a singleton with a `globalThis` guard to survive Next.js HMR restarts in development.
+- `in-memory-repository.ts` — Implements `FeatureRequestRepository` with two private `Map` fields. Exported as a singleton with a `globalThis` guard to survive Next.js HMR restarts in development.
 
 #### UI (`ui/`)
 
-- Server Components: `FeatureRequestList`, `FeatureRequestCard`, `FeatureRequestDetail`, `StatusBadge`, `PriorityBadge`, `CommentList`
-- Client Components (`'use client'`): `CreateFeatureRequestForm`, `UpdateStatusForm`, `AddCommentForm`
+- **Server Components**: `FeatureRequestList`, `FeatureRequestCard`, `FeatureRequestDetail`, `StatusBadge`, `PriorityBadge`, `CommentList`
+- **Client Components** (`'use client'`): `CreateFeatureRequestForm`, `UpdateStatusForm`, `AddCommentForm`
 
 Client Components call the REST API via `fetch`, then call `router.refresh()` to re-render the Server Component tree without a full navigation.
 
@@ -118,7 +132,7 @@ Client Components call the REST API via `fetch`, then call `router.refresh()` to
 
 ## API Reference
 
-All error responses follow this format:
+All error responses share this format:
 
 ```json
 {
@@ -155,7 +169,7 @@ Returns all feature requests sorted by newest first.
 
 #### `POST /api/feature-requests`
 
-Creates a new feature request. Status is always set to `OPEN`.
+Creates a new feature request. Status is always initialised to `OPEN`.
 
 **Request body**
 ```json
@@ -167,7 +181,6 @@ Creates a new feature request. Status is always set to `OPEN`.
 ```
 
 **Response `201`** — created `FeatureRequest` object.
-
 **Response `422`** — validation error with field-level details.
 
 ---
@@ -192,7 +205,6 @@ Returns a single feature request with its comments.
 ```
 
 **Response `404`** — not found.
-
 **Response `422`** — invalid UUID format.
 
 ---
@@ -228,18 +240,9 @@ Adds a comment to a feature request.
 
 ---
 
-## Enums
-
-| Enum | Values |
-|---|---|
-| `Status` | `OPEN`, `PLANNED`, `IN_PROGRESS`, `DONE` |
-| `Priority` | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` |
-
----
-
 ## Testing
 
-### Run tests
+### Run
 
 ```bash
 npm run test
@@ -249,34 +252,125 @@ npm run test
 
 `src/modules/feature-requests/application/__tests__/create-feature-request.test.ts`
 
-Unit tests for `CreateFeatureRequestUseCase` using an isolated in-memory stub repository (not the singleton):
+Unit tests for `CreateFeatureRequestUseCase` using an isolated stub repository (not the singleton):
 
 - Creates a feature request with `OPEN` status and a valid UUID v4.
 - Persists the entity in the repository.
 
-### What is not tested (and why)
+### What is not tested
 
-Integration tests for API routes and E2E tests for the UI are outside the scope of this take-home. The architecture makes them straightforward to add:
+Integration and E2E tests are outside the scope of this project. The architecture makes them straightforward to add:
 
-- **API routes** — use `next-test-api-route-handler` or `supertest` with a custom server.
-- **UI** — use Playwright or Cypress against `npm run dev`.
+- **API routes** — `next-test-api-route-handler` or `supertest`.
+- **UI** — Playwright or Cypress against `npm run dev`.
+
+---
+
+## Assumptions
+
+- **Single user, no authentication** — the brief did not mention auth. The board is treated as a shared internal tool where anyone can create, update, and comment on requests.
+- **No pagination** — the dataset is assumed to be small enough for a full list on one page.
+- **No search or filtering** — not mentioned in the requirements; out of scope.
+- **Status always starts as `OPEN`** — a newly created request has not been reviewed yet, so `OPEN` is the only sensible default.
+- **Comments are append-only** — editing or deleting comments is not part of the spec.
+- **In-memory storage is acceptable for the take-home** — the brief explicitly offered it as an option. The repository pattern ensures the switch to a real database is a one-file change.
+
+---
+
+## Intentional Decisions
+
+### `as const` objects instead of TypeScript `enum`
+
+TypeScript enums have a number of well-known pitfalls (reverse mapping, module augmentation issues, incompatibility with `isolatedModules`). Using `as const` objects with a derived union type gives the same runtime guarantees, works cleanly with `z.enum(Object.values(...))`, and produces simpler compiled output.
+
+### Zod schemas as single source of truth
+
+All validation lives in `application/schemas.ts`. DTOs are `z.infer<>` derivations — no manual type duplication. This means a change to a validation rule automatically narrows the type used by use-cases and API handlers.
+
+### Dates as ISO 8601 strings
+
+Entities store dates as strings rather than `Date` objects. This eliminates serialisation friction when values cross the API boundary via `JSON.stringify` — no conversion step is needed anywhere in the codebase.
+
+### Constructor injection without a DI container
+
+Each API route constructs the use-case directly, passing the repository singleton as a constructor argument. For a project of this scale, a DI container would add complexity without benefit. The pattern is easy to understand and test.
+
+### `globalThis` singleton pattern
+
+The in-memory repository is attached to `globalThis` in development to survive Next.js Hot Module Replacement restarts. In production the guard is skipped. This is the same approach recommended by Prisma for Next.js.
+
+### Server Components + `router.refresh()`
+
+Pages are Server Components that fetch data directly. Client Components handle mutations via `fetch` + `router.refresh()`. This keeps data-fetching logic out of client bundles and avoids global state management.
+
+---
+
+## Items Not Implemented
+
+### Persistent storage
+
+Data is held in memory and does not survive a server restart or a Vercel cold start. For a production deployment, a database is required. The repository interface (`FeatureRequestRepository`) makes this a drop-in swap — see [Swapping to Prisma](#swapping-to-prisma).
+
+### Authentication and authorisation
+
+No login, sessions, or role-based access control. Out of scope for the brief.
+
+### Search and filtering
+
+No full-text search or filter by status/priority. Can be added as a query-param on `GET /api/feature-requests` without touching the domain layer.
+
+### Pagination
+
+The list endpoint returns all records. Acceptable for a small internal team; a `cursor` or `page`/`limit` param can be added at the use-case level.
+
+### Editing and deleting
+
+Feature requests and comments cannot be edited or deleted. Not mentioned in the brief.
+
+### Integration and E2E tests
+
+Only one use-case is unit-tested. API route integration tests and browser E2E tests were not implemented within the scope of this take-home.
+
+### Real-time updates
+
+The board does not push updates to other open browser tabs. A polling interval or WebSocket connection could be added on top of the existing API without architectural changes.
 
 ---
 
 ## Swapping to Prisma
 
-The in-memory repository can be replaced with a Prisma implementation without touching any application or domain code:
+No application or domain code needs to change. Steps:
 
-1. Install Prisma: `npm install prisma @prisma/client`
-2. Define `FeatureRequest` and `Comment` models in `prisma/schema.prisma`.
+1. `npm install prisma @prisma/client`
+2. Define models in `prisma/schema.prisma`:
+
+```prisma
+model FeatureRequest {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  status      String
+  priority    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  comments    Comment[]
+}
+
+model Comment {
+  id               String         @id @default(uuid())
+  featureRequestId String
+  body             String
+  createdAt        DateTime       @default(now())
+  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id])
+}
+```
+
 3. Create `src/modules/feature-requests/infrastructure/prisma-repository.ts` implementing `FeatureRequestRepository`.
-4. In each API route file, replace the import of `featureRequestRepository` from `in-memory-repository` with the new Prisma singleton.
-
-No use-cases, schemas, or domain code needs to change.
+4. Replace the import of `featureRequestRepository` in each API route file to point to the new Prisma singleton.
 
 ---
 
-## Project Structure (full)
+## Project Structure
 
 ```
 .
@@ -334,7 +428,7 @@ No use-cases, schemas, or domain code needs to change.
 ├── .eslintrc.json
 ├── .eslintignore
 ├── .gitignore
-├── next.config.ts
+├── next.config.js
 ├── package.json
 ├── postcss.config.js
 ├── tailwind.config.ts
