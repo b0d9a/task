@@ -47,15 +47,17 @@ class InMemoryFeatureRequestRepository implements FeatureRequestRepository {
   }
 }
 
-declare global {
-  var _featureRequestRepo: InMemoryFeatureRequestRepository | undefined;
+interface GlobalWithRepo {
+  _featureRequestRepo?: InMemoryFeatureRequestRepository;
 }
 
+const g = globalThis as unknown as GlobalWithRepo;
+
 const repo: InMemoryFeatureRequestRepository =
-  globalThis._featureRequestRepo ?? new InMemoryFeatureRequestRepository();
+  g._featureRequestRepo ?? new InMemoryFeatureRequestRepository();
 
 if (process.env.NODE_ENV !== 'production') {
-  globalThis._featureRequestRepo = repo;
+  g._featureRequestRepo = repo;
 }
 
 export const featureRequestRepository: FeatureRequestRepository = repo;
