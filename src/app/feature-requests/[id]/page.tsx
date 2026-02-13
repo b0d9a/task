@@ -20,7 +20,6 @@ export default async function FeatureRequestDetailPage({
     const useCase = new GetFeatureRequestUseCase(featureRequestRepository);
     detail = await useCase.execute(params.id);
   } catch (err) {
-    console.error('[FeatureRequestDetailPage] error:', err);
     if (err instanceof NotFoundError || (err instanceof Error && 'code' in err && (err as { code: string }).code === 'NOT_FOUND')) notFound();
     throw err;
   }
