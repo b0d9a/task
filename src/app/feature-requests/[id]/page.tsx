@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { DetailDTO } from '@/modules/feature-requests/application/dtos';
+import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/in-memory-repository';
+import { GetFeatureRequestUseCase } from '@/modules/feature-requests/application/use-cases/get-feature-request';
+import { NotFoundError } from '@/modules/feature-requests/application/errors';
 import { FeatureRequestDetail } from '@/modules/feature-requests/ui/FeatureRequestDetail';
 import { UpdateStatusForm } from '@/modules/feature-requests/ui/UpdateStatusForm';
 import { CommentList } from '@/modules/feature-requests/ui/CommentList';
@@ -8,22 +10,19 @@ import { AddCommentForm } from '@/modules/feature-requests/ui/AddCommentForm';
 
 export const dynamic = 'force-dynamic';
 
-async function fetchDetail(id: string): Promise<DetailDTO | null> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/feature-requests/${id}`, {
-    cache: 'no-store',
-  });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error('Failed to fetch feature request');
-  return res.json();
-}
-
 export default async function FeatureRequestDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const detail = await fetchDetail(params.id);
-  if (!detail) notFound();
+  let detail;
+  try {
+    const useCase = new GetFeatureRequestUseCase(featureRequestRepository);
+    detail = await useCase.execute(params.id);
+  } catch (err) {
+    if (err instanceof NotFoundError) notFound();
+    throw err;
+  }
 
   const { featureRequest, comments } = detail;
 

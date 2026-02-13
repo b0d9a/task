@@ -1,19 +1,18 @@
 import Link from 'next/link';
 import type { FeatureRequestDTO } from '@/modules/feature-requests/application/dtos';
 import { FeatureRequestList } from '@/modules/feature-requests/ui/FeatureRequestList';
+import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/in-memory-repository';
+import { ListFeatureRequestsUseCase } from '@/modules/feature-requests/application/use-cases/list-feature-requests';
 
 export const dynamic = 'force-dynamic';
 
-async function fetchFeatureRequests(): Promise<FeatureRequestDTO[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/feature-requests`, {
-    cache: 'no-store',
-  });
-  if (!res.ok) return [];
-  return res.json();
+async function getFeatureRequests(): Promise<FeatureRequestDTO[]> {
+  const useCase = new ListFeatureRequestsUseCase(featureRequestRepository);
+  return useCase.execute();
 }
 
 export default async function FeatureRequestsPage() {
-  const items = await fetchFeatureRequests();
+  const items = await getFeatureRequests();
 
   return (
     <>
