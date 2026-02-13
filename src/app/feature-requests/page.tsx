@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { FeatureRequestDTO } from '@/modules/feature-requests/application/dtos';
 import { FeatureRequestList } from '@/modules/feature-requests/ui/FeatureRequestList';
-import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/in-memory-repository';
+import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/postgres-repository';
 import { ListFeatureRequestsUseCase } from '@/modules/feature-requests/application/use-cases/list-feature-requests';
 
 export const dynamic = 'force-dynamic';

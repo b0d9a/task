@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/in-memory-repository';
+import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/postgres-repository';
 import { GetFeatureRequestUseCase } from '@/modules/feature-requests/application/use-cases/get-feature-request';
 import { NotFoundError } from '@/modules/feature-requests/application/errors';
 import { FeatureRequestDetail } from '@/modules/feature-requests/ui/FeatureRequestDetail';
