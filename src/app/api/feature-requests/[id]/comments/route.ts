@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/in-memory-repository';
+import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/postgres-repository';
 import { AddCommentUseCase } from '@/modules/feature-requests/application/use-cases/add-comment';
 import { IdParamSchema, AddCommentSchema } from '@/modules/feature-requests/application/schemas';
 import { errorResponse } from '@/lib/api-response';

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/in-memory-repository';
+import { featureRequestRepository } from '@/modules/feature-requests/infrastructure/postgres-repository';
 import { GetFeatureRequestUseCase } from '@/modules/feature-requests/application/use-cases/get-feature-request';
 import { UpdateFeatureRequestUseCase } from '@/modules/feature-requests/application/use-cases/update-feature-request';
 import { IdParamSchema, UpdateFeatureRequestSchema } from '@/modules/feature-requests/application/schemas';
