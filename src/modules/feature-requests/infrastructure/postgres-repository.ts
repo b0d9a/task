@@ -42,9 +42,11 @@ export class PostgresFeatureRequestRepository implements FeatureRequestRepositor
   }
 
   async findById(id: string): Promise<FeatureRequest | null> {
+    console.log('[findById] searching for id:', id);
     await ensureInit();
     const sql = getSql();
     const rows = await sql`SELECT * FROM feature_requests WHERE id = ${id}`;
+    console.log('[findById] rows found:', rows.length);
     if (rows.length === 0) return null;
     return rowToFeatureRequest(rows[0] as Record<string, unknown>);
   }
