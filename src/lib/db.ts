@@ -8,7 +8,7 @@ export function getSql(): NeonQueryFunction<false, false> {
     if (!url) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
-    _sql = neon(url);
+    _sql = neon(url, { fetchOptions: { cache: 'no-store' } });
   }
   return _sql;
 }

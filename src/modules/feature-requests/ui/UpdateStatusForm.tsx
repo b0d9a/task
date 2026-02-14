@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Status, Priority } from '../domain/enums';
 
@@ -16,6 +16,11 @@ export function UpdateStatusForm({ id, currentStatus, currentPriority }: Props) 
   const [priority, setPriority] = useState<Priority>(currentPriority);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setStatus(currentStatus);
+    setPriority(currentPriority);
+  }, [currentStatus, currentPriority]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
